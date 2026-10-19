@@ -68,6 +68,11 @@ def _hash_point(name: str) -> np.ndarray:
     )
 
 
+def _key(name: str) -> str:
+    """Case- and underscore-insensitive lookup key ("LegNp_T1_R" == "LegNpT1_R")."""
+    return name.lower().replace("_", "").replace("(", "").replace(")", "")
+
+
 def _normalise_region(name: str, side: str) -> str:
     n = str(name).strip()
     if not n:
@@ -82,7 +87,7 @@ def schematic_layout(neurons: pd.DataFrame, W=None, seed: int = 0) -> np.ndarray
     """(N, 3) float32 positions: region centre + spread, as described above."""
     rng = np.random.default_rng(seed)
     centers = region_centers()
-    lowered = {k.lower(): v for k, v in centers.items()}
+    lowered = {_key(k): v for k, v in centers.items()}
     region_col = neurons.get("neuropil", pd.Series([""] * len(neurons)))
     sides = neurons.get("side", pd.Series([""] * len(neurons))).astype(str).to_numpy()
     fallback = neurons.get("super_class", pd.Series([""] * len(neurons))).astype(str).to_numpy()
@@ -92,10 +97,10 @@ def schematic_layout(neurons: pd.DataFrame, W=None, seed: int = 0) -> np.ndarray
     keys = np.array([_normalise_region(r, s) if r else f"class:{f}:{s}" for r, s, f in zip(regions, sides, fallback)])
     uniq, inv, counts = np.unique(keys, return_inverse=True, return_counts=True)
     for k, (key, n) in enumerate(zip(uniq, counts)):
-        c = lowered.get(key.lower())
+        c = lowered.get(_key(key))
         if c is None and key.endswith(("_L", "_R")):
             # A midline region (e.g. GNG) reported with a side: nudge it.
-            base = lowered.get(key[:-2].lower())
+            base = lowered.get(_key(key[:-2]))
             if base is not None:
                 c = (base[0] + (15.0 if key.endswith("_R") else -15.0), base[1], base[2])
         if c is None:

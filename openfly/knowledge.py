@@ -16,6 +16,10 @@ Filter values:
 * ``["a", "b"]`` matches any of several values,
 * ``"re:^PAM"`` is a regular expression.
 
+A selector can also be a *list* of such dicts: alternatives tried in
+order, for datasets that name things differently (FlyWire ``DNp01`` is
+the hemibrain's ``Giant Fiber``).
+
 Add your own with :func:`register_alias`.
 """
 
@@ -27,7 +31,7 @@ from dataclasses import dataclass, field
 @dataclass(frozen=True)
 class Alias:
     name: str
-    selector: dict
+    selector: dict | list  # a dict of column filters, or a list of alternatives
     description: str
     reference: str = ""
     group: str = "misc"
@@ -40,14 +44,15 @@ ALIASES: dict[str, Alias] = {}
 
 def register_alias(
     name: str,
-    selector: dict,
+    selector: dict | list,
     description: str,
     reference: str = "",
     group: str = "misc",
     confidence: str = "established",
 ) -> Alias:
     """Add (or replace) an alias. Names are case-insensitive."""
-    a = Alias(name, dict(selector), description, reference, group, confidence)
+    sel = [dict(x) for x in selector] if isinstance(selector, list) else dict(selector)
+    a = Alias(name, sel, description, reference, group, confidence)
     ALIASES[name.lower()] = a
     return a
 
@@ -95,10 +100,10 @@ _r("vinegar_ORN", {"cell_type": ["ORN_DM1", "ORN_VA2"]}, "Or42b/Or92a neurons, t
    "Semmelhack & Wang 2009 Nature", "smell")
 
 # ------------------------------------------------------- mushroom body
-_r("KC", {"cell_class": "Kenyon_Cell"}, "Kenyon cells: ~5,000 sparse odour coders of the mushroom body (learning centre).",
+_r("KC", [{"cell_class": "Kenyon_Cell"}, {"cell_type": "re:^KC"}], "Kenyon cells: ~5,000 sparse odour coders of the mushroom body (learning centre).",
    "Aso et al. 2014 eLife; Li et al. 2020 eLife", "learning")
-_r("MBON", {"cell_class": "MBON"}, "Mushroom body output neurons: read out learned valence.", "Aso et al. 2014 eLife", "learning")
-_r("DAN", {"cell_class": "DAN"}, "Dopaminergic neurons of the mushroom body (teaching signals).", "Aso et al. 2014 eLife", "learning")
+_r("MBON", [{"cell_class": "MBON"}, {"cell_type": "re:^MBON"}], "Mushroom body output neurons: read out learned valence.", "Aso et al. 2014 eLife", "learning")
+_r("DAN", [{"cell_class": "DAN"}, {"cell_type": "re:^(PAM|PPL)"}], "Dopaminergic neurons of the mushroom body (teaching signals).", "Aso et al. 2014 eLife", "learning")
 _r("PAM", {"cell_type": "re:^PAM"}, "PAM dopaminergic cluster: mostly reward signals.", "Liu et al. 2012 Nature; Burke et al. 2012 Nature", "learning")
 _r("PPL1", {"cell_type": "re:^PPL1"}, "PPL1 dopaminergic cluster: mostly punishment signals.", "Claridge-Chang et al. 2009 Cell", "learning")
 _r("APL", {"cell_type": "APL"}, "Anterior paired lateral neuron: one giant GABAergic neuron that keeps KC activity sparse.",
@@ -156,8 +161,8 @@ _r("antennal_MN", {"cell_sub_class": "antennal_motor_neuron"}, "Motor neurons th
 _r("neck_MN", {"cell_sub_class": "neck_motor_neuron"}, "Neck motor neurons (head turning).", "Schlegel et al. 2024 Nature", "motor")
 _r("descending", {"super_class": "descending"}, "All descending neurons: the brain's ~1,300 output wires to the body.",
    "Schlegel et al. 2024 Nature", "motor")
-_r("giant_fiber", {"cell_type": "DNp01"}, "The giant fiber (DNp01): command neuron for the escape jump.", "Allen et al. 2006; von Reyn et al. 2014", "motor")
-_r("GF", {"cell_type": "DNp01"}, "Alias of giant_fiber.", "von Reyn et al. 2014 Nat Neurosci", "motor")
+_r("giant_fiber", [{"cell_type": "DNp01"}, {"cell_type": "Giant Fiber"}], "The giant fiber (DNp01): command neuron for the escape jump.", "Allen et al. 2006; von Reyn et al. 2014", "motor")
+_r("GF", [{"cell_type": "DNp01"}, {"cell_type": "Giant Fiber"}], "Alias of giant_fiber.", "von Reyn et al. 2014 Nat Neurosci", "motor")
 _r("MDN", {"cell_type": "MDN"}, "Moonwalker descending neurons: command backward walking.", "Bidaye et al. 2014 Science", "motor")
 _r("DNa02", {"cell_type": "DNa02"}, "Steering DN: activity on one side turns the fly toward that side.", "Rayshubskiy et al. 2020 bioRxiv; Yang et al. 2024 Cell", "motor")
 _r("DNa01", {"cell_type": "DNa01"}, "Steering DN (slower, sustained turns).", "Rayshubskiy et al. 2020 bioRxiv", "motor")

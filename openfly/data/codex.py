@@ -103,9 +103,10 @@ def build_codex(neurons_path: str | Path, connections_path: str | Path, meta: di
 
     # sign: per-row transmitter if known, else the neuron's prediction
     neuron_nt = pd.Series(neurons.get("nt", pd.Series([""] * len(neurons))).fillna("").to_numpy(), index=index)
-    row_nt = con["nt_type"].astype(str)
+    row_nt = con["nt_type"].astype(object)
+    missing = (row_nt.isna() | row_nt.isin(["", "nan"])).to_numpy()
     fallback = neuron_nt.reindex(con["pre_root_id"].to_numpy()).fillna("").to_numpy()
-    nt = np.where(row_nt.isin(["nan", ""]), fallback, row_nt.to_numpy())
+    nt = np.where(missing, fallback, row_nt.fillna("").astype(str).to_numpy())
     sign = np.where(pd.Series(nt).isin(INHIBITORY).to_numpy(), -1.0, 1.0)
 
     i = index.get_indexer(con["pre_root_id"].to_numpy())

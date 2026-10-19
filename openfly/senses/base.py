@@ -82,7 +82,8 @@ class Stimulus:
 
     def __repr__(self) -> str:
         when = f"{self.start_ms:g}-{'end' if self.stop_ms is None else f'{self.stop_ms:g}'} ms"
-        rate = f"{self.rates.mean():.0f} Hz" if self.kind == "poisson" else f"{self.rates.mean():.1f} mV"
+        mean = float(self.rates.mean()) if self.rates.size else 0.0
+        rate = f"{mean:.0f} Hz" if self.kind == "poisson" else f"{mean:.1f} mV"
         dyn = ", dynamic" if self.dynamic else ""
         return f"<Stimulus {self.name!r}: {len(self)} neurons, {rate}, {when}{dyn}>"
 

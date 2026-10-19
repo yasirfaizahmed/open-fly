@@ -57,8 +57,13 @@ def _member(tar: tarfile.TarFile, suffix: str):
     raise FileNotFoundError(suffix)
 
 
-def build_neuprint(archive_or_dir: str | Path, nt_lookup: dict[str, str] | None = None, meta: dict | None = None):
-    """Build a Brain from a neuPrint adjacency export (``.tar.gz`` or folder)."""
+def build_neuprint(archive_or_dir: str | Path, nt_lookup: dict[str, str] | None = None, meta: dict | None = None,
+                   class_lookup: pd.DataFrame | None = None):
+    """Build a Brain from a neuPrint adjacency export (``.tar.gz`` or folder).
+
+    ``nt_lookup`` maps cell type -> transmitter; ``class_lookup`` (indexed by
+    cell type, columns like ``super_class``/``cell_class``) fills in classes.
+    """
     from ..brain import Brain
 
     src = Path(archive_or_dir)
@@ -92,6 +97,9 @@ def build_neuprint(archive_or_dir: str | Path, nt_lookup: dict[str, str] | None 
     if nt_lookup:
         df["nt"] = df["cell_type"].map(nt_lookup).fillna("")
         matched = int((df["nt"] != "").sum())
+    if class_lookup is not None:
+        for col in class_lookup.columns:
+            df[col] = df["cell_type"].map(class_lookup[col]).fillna("")
     index = pd.Index(df["root_id"].to_numpy())
     pre_nt = df["nt"].to_numpy() if "nt" in df else np.full(len(df), "")
     i = index.get_indexer(total["bodyId_pre"].to_numpy())
@@ -117,9 +125,19 @@ def build_neuprint(archive_or_dir: str | Path, nt_lookup: dict[str, str] | None 
     return Brain(df, W, info)
 
 
+def lookups_from_flywire(annotations_path: str | Path):
+    """From FlyWire annotations: (hemibrain type -> transmitter, table of classes per hemibrain type)."""
+    cols = ["hemibrain_type", "top_nt", "flow", "super_class", "cell_class"]
+    a = pd.read_csv(annotations_path, sep="\t", low_memory=False, usecols=cols)
+    a = a.dropna(subset=["hemibrain_type"])
+    a = a.assign(hemibrain_type=a["hemibrain_type"].str.split(",")).explode("hemibrain_type")
+    mode = lambda s: s.dropna().value_counts().index[0] if s.notna().any() else ""  # noqa: E731
+    g = a.groupby("hemibrain_type")
+    nt = g["top_nt"].agg(mode).to_dict()
+    classes = g[["flow", "super_class", "cell_class"]].agg(mode)
+    return nt, classes
+
+
 def nt_lookup_from_flywire(annotations_path: str | Path) -> dict[str, str]:
     """hemibrain type -> most common FlyWire predicted transmitter."""
-    a = pd.read_csv(annotations_path, sep="\t", low_memory=False, usecols=["hemibrain_type", "top_nt"])
-    a = a.dropna()
-    a = a.assign(hemibrain_type=a["hemibrain_type"].str.split(",")).explode("hemibrain_type")
-    return a.groupby("hemibrain_type")["top_nt"].agg(lambda s: s.value_counts().index[0]).to_dict()
+    return lookups_from_flywire(annotations_path)[0]

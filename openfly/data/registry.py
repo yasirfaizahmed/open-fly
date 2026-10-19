@@ -308,11 +308,11 @@ for _name, _d, _v, _title, _mb, _cite in [
 def _build_hemibrain(paths):
     from . import neuprint
 
-    lookup = None
+    nt, classes = None, None
     ann = paths.get("flywire_annotations")
     if ann is not None:
-        lookup = neuprint.nt_lookup_from_flywire(ann)
-    return neuprint.build_neuprint(paths["archive"], nt_lookup=lookup)
+        nt, classes = neuprint.lookups_from_flywire(ann)
+    return neuprint.build_neuprint(paths["archive"], nt_lookup=nt, class_lookup=classes)
 
 
 register(

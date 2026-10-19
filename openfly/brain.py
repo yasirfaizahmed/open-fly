@@ -274,9 +274,14 @@ class Brain:
         key = str(name).strip()
         alias = knowledge.get_alias(key)
         if alias is not None:
-            ns = self.select(label=alias.name, **alias.selector)
-            if len(ns):
-                return ns
+            # a selector may list alternatives for different datasets' naming
+            for sel in alias.selector if isinstance(alias.selector, list) else [alias.selector]:
+                try:
+                    ns = self.select(label=alias.name, **sel)
+                except KeyError:  # column missing in this dataset
+                    continue
+                if len(ns):
+                    return ns
         for col in self._LOOKUP_COLUMNS:
             if col in self.neurons:
                 m = (self.neurons[col] == key).to_numpy()
@@ -289,8 +294,10 @@ class Brain:
         raise KeyError(self._suggest(key))
 
     def _suggest(self, key: str) -> str:
-        pool = set(knowledge.ALIASES) | set(self.neurons["cell_type"].unique())
-        close = difflib.get_close_matches(key, [p for p in pool if p], n=6, cutoff=0.6)
+        pool = {a.name for a in knowledge.ALIASES.values()} | set(self.neurons["cell_type"].unique())
+        pool = {p for p in pool if p}
+        by_lower = {p.lower(): p for p in pool}
+        close = [by_lower[c] for c in difflib.get_close_matches(key.lower(), list(by_lower), n=6, cutoff=0.6)]
         hint = f" Did you mean: {', '.join(close)}?" if close else ""
         return f"No neurons called {key!r} in {self.name}.{hint}"
 
@@ -317,7 +324,10 @@ class Brain:
         rows = []
         for a in knowledge.ALIASES.values():
             if t in a.name.lower() or t in a.description.lower():
-                n = len(self.select(**a.selector))
+                try:
+                    n = len(self.resolve(a.name))
+                except KeyError:
+                    n = 0
                 if n:
                     rows.append({"name": a.name, "kind": "alias", "n": n, "description": a.description})
         ct = self.neurons["cell_type"]
