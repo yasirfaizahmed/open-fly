@@ -124,3 +124,58 @@ def describe(behavior: dict) -> str:
             bar = "#" * int(round(d * 10))
             lines.append(f"{name:<14}{bar:<10} {d:.2f}  ({b['rate_hz']:.0f} Hz)")
     return "\n".join(lines)
+
+
+class MotorMonitor:
+    """Live behaviour readout from a stream of spikes (exponentially smoothed).
+
+    Feed it the spikes of each simulation chunk with :meth:`update`; it
+    returns the same drives as :func:`read_behavior`, smoothed with time
+    constant ``tau_ms``. Used by the playground and the virtual fly.
+    """
+
+    def __init__(self, brain, channels=None, tau_ms: float = 100.0):
+        chans = [CHANNELS[c] if isinstance(c, str) else c for c in (channels or CHANNELS.values())]
+        sets = _sets(brain, chans)
+        side = brain.neurons["side"].to_numpy()
+        self.brain = brain
+        self.tau_ms = tau_ms
+        self.channels = {}
+        for ch in chans:
+            ns = sets[ch.name]
+            if ns is not None:
+                s = side[ns.idx]
+                self.channels[ch.name] = (ns.idx, s == "left", s == "right", ch)
+        self.ema: dict[str, float] = {}
+        self.drive: dict[str, float] = {}
+
+    def update(self, neurons: np.ndarray, window_ms: float) -> dict:
+        counts = np.bincount(neurons, minlength=self.brain.N) if neurons.size else None
+        win_s = window_ms / 1000.0
+        alpha = min(1.0, window_ms / self.tau_ms)
+        out = {}
+        for name, (idx, is_l, is_r, ch) in self.channels.items():
+            if counts is None:
+                l = r = m = 0.0
+            else:
+                c = counts[idx] / win_s
+                l = float(c[is_l].mean()) if is_l.any() else 0.0
+                r = float(c[is_r].mean()) if is_r.any() else 0.0
+                m = float(c.mean())
+            for key, val in ((f"{name}_l", l), (f"{name}_r", r), (name, m)):
+                self.ema[key] = (1 - alpha) * self.ema.get(key, 0.0) + alpha * val
+            L, R, M = self.ema[f"{name}_l"], self.ema[f"{name}_r"], self.ema[name]
+            if ch.mode == "lr":
+                out[name] = (R - L) / (R + L + ch.half_rate_hz)
+            else:
+                out[name] = M / (M + ch.half_rate_hz)
+        self.drive = out
+        return out
+
+    def rates(self) -> dict:
+        """Smoothed rates (Hz): ``{channel: mean}`` plus ``channel_l`` / ``channel_r``."""
+        return dict(self.ema)
+
+    def reset(self) -> None:
+        self.ema.clear()
+        self.drive.clear()

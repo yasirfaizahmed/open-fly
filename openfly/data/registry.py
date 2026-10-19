@@ -137,23 +137,34 @@ def download(name: str, include_optional: bool = True, progress: bool = True) ->
     return out
 
 
-def load(name: str | Path = "flywire_783", rebuild: bool = False, progress: bool = True):
-    """Load a brain by dataset name or ``.flybrain`` path. Downloads on first use."""
+def load(name: str | Path = "flywire_783", rebuild: bool = False, progress: bool = True, transmitters=None):
+    """Load a brain by dataset name or ``.flybrain`` path. Downloads on first use.
+
+    ``transmitters="curated"`` applies literature-based neurotransmitter
+    corrections (see :mod:`openfly.transmitters`); the default keeps the
+    signs exactly as published.
+    """
     from .brainfile import read_brain, write_brain
 
     p = Path(str(name)).expanduser()
     if p.suffix == ".flybrain":
-        return read_brain(p)
-    ds = get_dataset(str(name))
-    cache = _cache_path(ds)
-    if ds.cache and cache.exists() and not rebuild:
-        return read_brain(cache)
-    paths = download(ds.name, progress=progress) if (ds.files or ds.optional_files) else {}
-    brain = ds.build(paths)
-    brain.meta.update(ds.meta())
-    if ds.cache:
-        write_brain(brain, cache)
-        brain.meta["file"] = str(cache)
+        brain = read_brain(p)
+    else:
+        ds = get_dataset(str(name))
+        cache = _cache_path(ds)
+        if ds.cache and cache.exists() and not rebuild:
+            brain = read_brain(cache)
+        else:
+            paths = download(ds.name, progress=progress) if (ds.files or ds.optional_files) else {}
+            brain = ds.build(paths)
+            brain.meta.update(ds.meta())
+            if ds.cache:
+                write_brain(brain, cache)
+                brain.meta["file"] = str(cache)
+    if transmitters not in (None, "shiu2024"):
+        from .. import transmitters as tx
+
+        brain = tx.apply(brain, transmitters)
     return brain
 
 

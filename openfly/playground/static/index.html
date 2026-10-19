@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>openfly playground</title>
+<link rel="stylesheet" href="/static/css/app.css">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<div id="splash"><div class="box"><div class="big">openfly</div><div class="sub" id="splashmsg">waking up the brain...</div><div class="spin"></div></div></div>
+<div id="app">
+  <header id="topbar">
+    <div class="logo"><span class="dot"></span>openfly</div>
+    <div class="brain-name" id="brainname"></div>
+    <div class="spacer"></div>
+    <div class="seg" id="modeseg"><button data-mode="brain" class="on">Brain</button><button data-mode="fly">Virtual fly</button></div>
+    <button class="btn" id="playbtn" title="Space">Pause</button>
+    <select id="speed" title="Maximum speed relative to real time">
+      <option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option><option value="5">max</option>
+    </select>
+    <button class="btn" id="resetbtn">Reset</button>
+    <button class="btn" id="soundbtn" title="Hear the brain">Sound off</button>
+    <span class="clock" id="clock">t = 0.000 s</span>
+    <span class="stat" id="stat"></span>
+  </header>
+
+  <aside class="side" id="left">
+    <div class="tabs">
+      <button data-tab="senses" class="on">Senses</button><button data-tab="neurons">Neurons</button><button data-tab="learn">Learn</button><button data-tab="lab">Lab</button>
+    </div>
+    <div class="tabpane on" id="tab-senses">
+      <h3>Scenarios</h3>
+      <div class="row"><label>mode</label><select id="stimmode"><option value="replace">replace current stimuli</option><option value="add">add to current stimuli</option></select></div>
+      <div class="cards" id="scenarios"></div>
+      <h3>Smell</h3>
+      <div class="row"><select id="odor" style="flex:1"></select></div>
+      <div class="row"><label>strength</label><input type="range" id="conc" min="0.05" max="2" step="0.05" value="1"><span id="concv">1.00</span></div>
+      <div class="row"><label>left/right</label><input type="range" id="lr" min="-1" max="1" step="0.1" value="0"><span id="lrv">both</span></div>
+      <div class="row"><button class="btn primary" id="smellbtn">Smell it</button><span class="stat" id="odordesc"></span></div>
+      <h3>Taste</h3>
+      <div class="row" id="tastes"></div>
+      <h3>Vision</h3>
+      <div class="row">
+        <button class="btn" data-vis="looming" data-az="-50">Looming left</button>
+        <button class="btn" data-vis="looming" data-az="50">Looming right</button>
+        <button class="btn" data-vis="flash">Flash</button>
+        <button class="btn" data-vis="spot" data-az="0">Fruit ahead</button>
+        <button class="btn" data-vis="object">Passing fly</button>
+        <button class="btn" data-vis="grating">Optic flow</button>
+      </div>
+      <h3>Hearing, touch, temperature</h3>
+      <div class="row">
+        <button class="btn" data-cmd='{"cmd":"hear","sound":"pulse_song"}'>Courtship song</button>
+        <button class="btn" data-cmd='{"cmd":"wind","direction":-90}'>Wind from left</button>
+        <button class="btn" data-cmd='{"cmd":"touch","where":"eye"}'>Dust on eyes</button>
+        <button class="btn" data-cmd='{"cmd":"temperature","kind":"hot","side":"left"}'>Heat left</button>
+        <button class="btn" data-cmd='{"cmd":"temperature","kind":"cold"}'>Cold</button>
+      </div>
+      <div class="row"><button class="btn danger" id="clearbtn">Remove all stimuli</button></div>
+    </div>
+
+    <div class="tabpane" id="tab-neurons">
+      <h3>Find neurons</h3>
+      <div class="row"><input type="text" id="search" placeholder="MN9, giant_fiber, KC, ORN_DM1, PAM..."><button class="btn" id="searchbtn">Search</button></div>
+      <div class="row"><label>rate</label><input type="range" id="rate" min="10" max="250" step="10" value="150"><span id="ratev">150 Hz</span></div>
+      <div class="row"><label>side</label><select id="nside"><option value="both">both</option><option value="left">left</option><option value="right">right</option></select></div>
+      <div class="results" id="results"></div>
+      <h3>Silenced</h3>
+      <div class="row"><span class="stat" id="silinfo">none</span><button class="btn small" id="unsilbtn">Restore all</button></div>
+    </div>
+
+    <div class="tabpane" id="tab-learn">
+      <h3>Lessons</h3>
+      <div id="lessons"></div>
+      <h3>Challenges</h3>
+      <div id="challenges"></div>
+    </div>
+
+    <div class="tabpane" id="tab-lab">
+      <h3>Pathway finder</h3>
+      <div class="row"><input type="text" id="psrc" value="sugar_GRN"><span>to</span><input type="text" id="ptgt" value="MN9"></div>
+      <div class="row"><button class="btn primary" id="pathbtn">Find strongest path</button><button class="btn small" id="pathclear">Clear</button></div>
+      <div class="path" id="pathout"></div>
+      <h3>Ripple map (influence)</h3>
+      <div class="row"><input type="text" id="isrc" value="bitter_GRN"><button class="btn" id="inflbtn">Colour by influence</button></div>
+      <div class="stat">Red = net excitation, blue = net inhibition, over 3 synapses (no simulation needed).</div>
+      <h3>Activation screen</h3>
+      <div class="row"><input type="text" id="scrtgt" value="MN9"><button class="btn" id="screenbtn">Who drives it?</button></div>
+      <div class="out" id="screenout" style="display:none"></div>
+      <h3>Olfactory conditioning</h3>
+      <div class="row"><label>CS+</label><select id="csp"></select></div>
+      <div class="row"><label>CS-</label><select id="csm"></select></div>
+      <div class="row"><label>pair with</label><select id="reinf"><option value="reward">reward (PAM dopamine)</option><option value="punishment">punishment (PPL1 dopamine)</option><option value="sugar">sugar taste</option><option value="bitter">bitter taste</option></select></div>
+      <div class="row"><button class="btn primary" id="condbtn">Train the fly</button></div>
+      <div class="out" id="condout" style="display:none"></div>
+    </div>
+  </aside>
+
+  <main id="stage">
+    <canvas id="gl"></canvas>
+    <div class="overlay" id="viewtools">
+      <div class="seg" id="colorseg"><button data-c="class" class="on">Class</button><button data-c="nt">Transmitter</button><button data-c="side">Side</button><button data-c="activity">Activity</button></div>
+      <div class="seg" id="viewseg"><button data-v="back">Back</button><button data-v="front">Front</button><button data-v="top">Top</button><button data-v="left">Side</button></div>
+      <button class="btn small" id="rotbtn">Auto-rotate</button>
+      <span class="btn small" style="display:flex;gap:6px;align-items:center">glow <input type="range" id="glow" min="40" max="600" value="140" style="width:70px"></span>
+      <span class="btn small" style="display:flex;gap:6px;align-items:center">dots <input type="range" id="dots" min="0.4" max="5" step="0.1" value="2" style="width:70px"></span>
+    </div>
+    <div class="overlay" id="layoutnote">schematic layout: this dataset has no neuron coordinates</div>
+    <div class="overlay" id="stimchips"></div>
+    <div class="overlay" id="legend"></div>
+    <div id="arenawrap">
+      <canvas id="arena"></canvas>
+      <div id="arenabar">
+        <select id="arenasel"></select>
+        <div class="seg" id="toolseg"><button data-t="move" class="on">Move fly</button><button data-t="food">Drop banana</button><button data-t="bitter">Drop bitter</button><button data-t="heat">Heat</button></div>
+        <button class="btn small" id="predbtn">Predator!</button>
+      </div>
+      <div id="arenastate"></div>
+    </div>
+    <div class="overlay" id="hint">drag = rotate &middot; right-drag = pan &middot; scroll = zoom &middot; click = inspect</div>
+  </main>
+
+  <aside class="side" id="right">
+    <div class="tabpane on" style="display:block">
+      <h3>Behaviour</h3>
+      <div id="meters"></div>
+      <h3>Population activity</h3>
+      <canvas class="chart" id="chart"></canvas>
+      <h3>Inspector</h3>
+      <div id="inspector"><span class="stat">Click a neuron in the brain.</span></div>
+      <h3>About this brain</h3>
+      <div class="stat" id="about"></div>
+    </div>
+  </aside>
+</div>
+<div id="toast"></div>
+<script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

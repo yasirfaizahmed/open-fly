@@ -87,6 +87,7 @@ def make_toy_brain(seed: int = 7):
         add("LH_av", s, "LHAV4a4", 4, cell_class="LHLN", region="LH", center=_c("LH", s), spread=8)
         add("LAL_app", s, "LAL_app", 2, region="LAL", center=_c("LAL", s))
         add("LAL_av", s, "LAL_av", 2, region="LAL", center=_c("LAL", s))
+        add("LAL_inh", s, "LAL_inh", 2, nt="gaba", region="LAL", center=_c("LAL", s))
         # ---------------------------------------------------------- motor
         for key, ct, region in (("DNa02", "DNa02", "LAL"), ("DNa01", "DNa01", "LAL"), ("DNp09", "DNp09", "SPS"),
                                 ("MDN", "MDN", "VES"), ("GF", "DNp01", "PVLP"), ("groomDN", "groom_DN", "GNG")):
@@ -180,9 +181,9 @@ def make_toy_brain(seed: int = 7):
         for m in ("MBON01", "MBON03", "MBON11", "MBON12"):
             c(kc, P[(m, s)], p=0.5, synapses=(15, 25))
         for m in ("MBON01", "MBON03"):  # reward (PAM) compartments
-            c(P[("PAM", s)], P[(m, s)], synapses=1)
+            c(P[("PAM", s)], P[(m, s)], synapses=3)
         for m in ("MBON11", "MBON12"):  # punishment (PPL1) compartments
-            c(P[("PPL1", s)], P[(m, s)], synapses=1)
+            c(P[("PPL1", s)], P[(m, s)], synapses=3)
         c(P[("MBON12", s)], P[("LAL_app", s)], synapses=40)
         c(P[("MBON11", s)], P[("LAL_av", s)], synapses=40)  # GABA: learned approach suppresses avoidance
         c(P[("MBON01", s)], P[("LAL_app", s)], synapses=40)  # glutamate: inhibits approach
@@ -191,10 +192,15 @@ def make_toy_brain(seed: int = 7):
         c(P[("LH_att", s)], P[("LAL_app", s)], synapses=60)
         c(P[("LH_av", s)], P[("LAL_av", s)], synapses=60)
         c(P[("LAL_app", s)], P[("DNa02", s)], synapses=100)
+        # bilateral mutual inhibition (a winner-take-all "flip-flop", as in insect LAL
+        # steering circuits) amplifies small left/right differences
+        c(P[("LAL_app", s)], P[("LAL_inh", s)], synapses=60)
+        c(P[("LAL_inh", s)], P[("DNa02", o)], synapses=120)
+        c(P[("LAL_inh", s)], P[("LAL_app", o)], synapses=60)
         c(P[("LAL_app", s)], P[("DNp09", s)], synapses=80)
         c(P[("LAL_av", s)], P[("DNa02", o)], synapses=100)
-        c(P[("LAL_av", s)], P[("MDN", s)], synapses=80)
-        c(P[("LAL_av", s)], P[("MDN", o)], synapses=60)
+        c(P[("LAL_av", s)], P[("MDN", s)], synapses=50)
+        c(P[("LAL_av", s)], P[("MDN", o)], synapses=35)
         # taste: sugar/water excite MN9, bitter/salt inhibit it; sugar is a reward, bitter a punishment
         c(P[("sugar", s)], P[("G2N", s)], synapses=16)
         c(P[("water", s)], P[("G2N", s)], synapses=14)

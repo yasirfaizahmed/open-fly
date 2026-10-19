@@ -14,7 +14,7 @@ Start here: ``docs/README.md``. Live playground: ``openfly playground``.
 """
 
 from ._version import __version__
-from . import knowledge, motor
+from . import agent, analysis, knowledge, learning, motor, transmitters
 from .brain import Brain
 from .data import BrainBuilder, datasets, download, load
 from .neurons import NeuronSet
@@ -22,6 +22,8 @@ from .sim import LIFParams, SHIU_2024, SimResult, Simulator, simulate
 from . import senses  # noqa: E402  (needs Brain/sim)
 
 __all__ = [
+    "analysis",
+    "transmitters",
     "Brain",
     "BrainBuilder",
     "LIFParams",

@@ -21,7 +21,7 @@ import time
 import numpy as np
 
 from ..senses.base import Stimulus, as_stimuli
-from .engine import LIFEngine
+from .fast import make_engine
 from .params import SHIU_2024, LIFParams
 from .results import SimResult
 
@@ -46,16 +46,19 @@ class Simulator:
         base random seed; trial ``k`` uses an independent stream derived from it.
     update_ms:
         how often time-varying stimuli are re-evaluated.
+    backend:
+        ``"auto"`` (compiled numba engine if installed, else NumPy), ``"numba"`` or ``"numpy"``.
     """
 
-    def __init__(self, brain, params: LIFParams = SHIU_2024, seed: int | None = 0, update_ms: float = 2.0):
+    def __init__(self, brain, params: LIFParams = SHIU_2024, seed: int | None = 0, update_ms: float = 2.0,
+                 backend: str = "auto"):
         self.brain = brain
         self.params = params
         self.seed = seed
         self.update_ms = update_ms
         self.stimuli: list[Stimulus] = []
         self.silenced = np.zeros(0, dtype=np.int64)
-        self.engine = LIFEngine(brain.W, params, seed)
+        self.engine = make_engine(brain.W, params, seed, backend)
         self._step_hooks: list = []
 
     # ------------------------------------------------------------ setup
