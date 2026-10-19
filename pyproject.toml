@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openfly"
+version = "0.1.0"
+description = "Explore, simulate, visualise and train the fruit fly brain connectome (FlyWire and friends)."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "openfly contributors" }]
+keywords = ["connectome", "drosophila", "flywire", "neuroscience", "spiking neural network", "simulation"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+]
+dependencies = ["numpy>=1.24", "scipy>=1.10", "pandas>=2.0", "pyarrow>=12"]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.7"]
+brian2 = ["brian2>=2.5"]
+dev = ["pytest>=7", "matplotlib>=3.7"]
+all = ["matplotlib>=3.7", "brian2>=2.5"]
+
+[project.scripts]
+openfly = "openfly.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yasirfaizahmed/open-fly"
+
+[tool.setuptools.packages.find]
+include = ["openfly*"]
+
+[tool.setuptools.package-data]
+openfly = ["playground/static/**/*", "viz/templates/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["flywire: needs the real FlyWire download (set OPENFLY_TEST_FLYWIRE=1)"]
