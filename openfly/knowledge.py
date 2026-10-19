@@ -150,6 +150,11 @@ _r("moist_HRN", {"cell_type": ["HRN_VP1d", "HRN_VP1l", "HRN_VP5"]}, "Moist/other
 # ------------------------------------------------------------- central
 _r("EPG", {"cell_type": ["EPG", "EPGt"]}, "Compass neurons of the ellipsoid body (heading).", "Seelig & Jayaraman 2015 Nature", "navigation")
 _r("PFL3", {"cell_type": "PFL3"}, "Central-complex steering output neurons.", "Westeinde et al. 2024 Nature", "navigation")
+_r("steering_premotor",
+   {"super_class": ["descending", "central"],
+    "neuropil": ["LAL_L", "LAL_R", "SPS_L", "SPS_R", "IPS_L", "IPS_R", "LAL", "SPS", "IPS"]},
+   "Descending and central neurons whose main neuropil is a premotor steering region (LAL, SPS, IPS).",
+   "Namiki et al. 2018 eLife; Rayshubskiy et al. 2020", "navigation", "likely")
 _r("pC1", {"cell_type": "re:^pC1"}, "Female social-behaviour neurons (receptivity, aggression).", "Wang et al. 2021 Neuron", "social")
 
 # ------------------------------------------------------- motor / output

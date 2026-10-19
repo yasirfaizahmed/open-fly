@@ -90,17 +90,50 @@ world = Arena(items=[FoodSource(80, 80, "apple_cider_vinegar", "sugar", name="ci
               wind_from_deg=0, wind_speed=1)
 ```
 
-## Results on the toy brain (6 random seeds each, 25 s)
+## Results on the toy brain
+
+**Default start, 6 seeds, 25 s.** The fly starts at (25, 25) facing 45 deg,
+which points within ~8 deg of the banana at (90, 75). That makes these
+runs the easy case:
 
 | arena | outcome |
 |---|---|
-| `banana` | **found and ate the banana 6/6** (first meal at 10-21 s) |
+| `banana` | found and ate the banana 6/6 (first meal at 10-21 s) |
 | `choice` | never went near the mouldy fruit (closest 25-67 mm); ate the banana 2/6 |
 | `bitter_trap` | reached the vinegar every time (min distance 0.3-10 mm) but **never fed**: smell attracts, bitter taste vetoes |
 | `hot_corner` | avoided the heat, **fed 6/6** |
 | `predator` | **escaped every attack (6/6)** and still fed 5/6 |
 
-These behaviours come from the toy wiring (a cartoon).
+**Random starts with sensory controls (the fair test).** A good start
+heading could make the brain look smarter than it is, so the benchmark
+uses 10 random starts (positions in 10-50 mm, any heading, `rng(42)`),
+30 s each, in the `banana` arena, under three conditions:
+
+| condition | fed | first meal (s) |
+|---|---|---|
+| intact brain | **10 / 10** | 3.9 - 20.2 (median 14.7) |
+| anosmic: all ORNs silenced | 3 / 10 | 18.9, 28.3, 29.9 |
+| blind + anosmic: ORNs and photoreceptors silenced | 2 / 10 | 10.9, 28.4 |
+
+Silencing the smell neurons removes most of the foraging: the remaining
+successes are the exploration drive bumping into food. Odour guidance is
+coming from the simulated circuit, not from the body rule. Reproduce it with:
+
+```python
+import numpy as np, openfly as of
+from openfly.agent import VirtualFly
+brain = of.load("toy")
+rng = np.random.default_rng(42)
+starts = zip(rng.uniform(10, 50, 10), rng.uniform(10, 50, 10), rng.uniform(0, 360, 10))
+for k, (x, y, h) in enumerate(starts):
+    fly = VirtualFly(brain, "banana", x=x, y=y, heading_deg=h, seed=k)
+    fly.sim.silence("ORN")              # comment out for the intact brain
+    fly.run(30)
+    print(k, any("feeding" in e["event"] for e in fly.events))
+```
+
+These behaviours come from the toy wiring (a cartoon), so they show
+that the *loop* works, not that real flies use these exact circuits.
 
 ## On the real FlyWire brain
 
@@ -110,12 +143,49 @@ ended 79.5 mm from the banana (it started 82 mm away) and never fed. That
 run took ~6 minutes of compute. The reason is the readout, not the body: in
 the whole-brain LIF model, banana odour barely recruits the descending
 neurons used for walking (DNp09) and steering (DNa02 carries a left bias), so
-movement is dominated by the exploration drive. Taste-evoked feeding and
-looming-evoked escape do work on FlyWire, so expect the virtual fly to
-**eat when it lands on sugar** and **jump when attacked**.
+movement is dominated by the exploration drive.
+
+What does work on FlyWire in closed loop is the **escape**. In the
+`predator` arena the attack came at 4.00 s and the giant fiber fired the
+escape jump at **4.02 s**, a 20 ms reaction time produced entirely by the real
+connectome (LC4/LPLC2 -> giant fiber). Taste-evoked feeding works too, so
+expect the fly to eat when it lands on sugar.
 
 Making odour-guided navigation emerge from the real connectome is an open
 problem and a good project. Candidate approaches: population decoding across
 many DNs instead of a single type, the central-complex steering pathway
 (PFL3), training readout gains with `GainTask`, or a VNC connectome (BANC)
 for the motor side.
+
+## A population decoder for real brains
+
+The first candidate above is implemented: `SteeringDecoder` reads the turn
+from ~170 premotor neurons instead of one cell type, the way a
+brain-computer interface reads a reach direction from motor cortex
+(how it is trained: [10](10-training-the-brain.md#4-training-the-interface-decoding-intentions)).
+
+```python
+from openfly.agent import SteeringDecoder, VirtualFly
+dec = SteeringDecoder.fit(brain, odor="banana")      # ~6 min, once
+dec.save("banana_decoder.npz")                       # reuse: SteeringDecoder.load(...)
+fly = VirtualFly(brain, "banana", steering=dec)
+```
+
+Held still, the decoder gets the odour side right on held-out conditions
+(-0.19 left, +0.21 right, -0.06 symmetric). In closed loop that helps but
+does not yet produce reliable odour steering:
+
+| FlyWire run (~20 s of compute per simulated second) | start | closest / end | fed |
+|---|---|---|---|
+| DNa02 readout, default start, 12 s | 82 mm | end 79.5 mm | no |
+| decoder, default start, seed 0, 20 s | 82 mm | 36.9 / 37.1 mm | no |
+
+The decoder fly got much closer, but the correlation between the
+banana's bearing and the decoded turn was only 0.05, so most of that
+approach comes from walking in roughly the right direction, not from
+steering. The decoded signal is small (~0.2) next to the exploration
+drive's random turns, and it was calibrated with the fly standing still,
+while in closed loop the odour changes all the time. Next steps worth
+trying: calibrate on closed-loop data (record while the fly walks),
+read a temporal derivative as the toy's klinokinesis does, or fit the
+decoder's gain with `GainTask` on a foraging objective.

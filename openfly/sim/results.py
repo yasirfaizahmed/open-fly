@@ -207,3 +207,9 @@ class SimResult:
         from ..viz.export import export_movie
 
         return export_movie(self, path, **kw)
+
+    def show(self, height: int = 520, **kw):
+        """Replay this simulation in 3D inline in a Jupyter notebook."""
+        from ..viz.export import show
+
+        return show(self, height=height, **kw)

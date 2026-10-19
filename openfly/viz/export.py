@@ -69,6 +69,21 @@ def _b64(a: np.ndarray) -> str:
 
 def export_movie(result, path, trial: int = 0, frame_ms: float = 10.0, title: str | None = None, subtitle: str | None = None):
     """Write ``path`` (HTML) replaying ``trial`` of a :class:`~openfly.SimResult` at real time."""
+    path = Path(path)
+    path.write_text(movie_html(result, trial, frame_ms, title, subtitle), encoding="utf-8")
+    return path
+
+
+def show(result, height: int = 520, **kw):
+    """Display the 3D replay inline in a Jupyter notebook (an iframe holding the movie page)."""
+    from IPython.display import HTML
+
+    page = movie_html(result, **kw)
+    return HTML(f'<iframe srcdoc="{html.escape(page)}" style="width:100%;height:{height}px;border:0;border-radius:12px"></iframe>')
+
+
+def movie_html(result, trial: int = 0, frame_ms: float = 10.0, title: str | None = None, subtitle: str | None = None) -> str:
+    """The self-contained replay page as a string."""
     from ..playground.session import PALETTE_CLASS, _codes
 
     b = result.brain
@@ -91,10 +106,7 @@ def export_movie(result, path, trial: int = 0, frame_ms: float = 10.0, title: st
         "counts": np.bincount(codes, minlength=len(names)).tolist(), "frame_ms": frame_ms,
     }
     viewer = _VIEWER.read_text().replace("export class", "class").replace("export function", "function")
-    page = (_TEMPLATE.replace("__VIEWER__", viewer).replace("__DATA__", json.dumps(data))
+    return (_TEMPLATE.replace("__VIEWER__", viewer).replace("__DATA__", json.dumps(data))
             .replace("__TITLE__", html.escape(title or result.label or "openfly simulation"))
             .replace("__SUBTITLE__", html.escape(subtitle or f"{b.meta.get('title', b.name)}: {b.N:,} neurons, "
                                                  f"{result.duration_ms:g} ms, {int(m.sum()):,} spikes")))
-    path = Path(path)
-    path.write_text(page, encoding="utf-8")
-    return path

@@ -23,6 +23,8 @@ starts from intuition and ends with code.
 | 12 | [Adding new brains](12-adding-new-brains.md) | Loading future releases and other connectomes |
 | 13 | [Validation](13-validation.md) | How we know the simulator is right |
 | 14 | [Findings and limitations](14-findings-and-limitations.md) | What exploring FlyWire with openfly turned up, and what the model can't do |
+| 15 | [Build journal](15-build-journal.md) | How openfly was built: decisions, bugs found, dead ends |
+| 16 | [FAQ](16-faq.md) | Quick answers |
 
 ## Hands-on lessons
 

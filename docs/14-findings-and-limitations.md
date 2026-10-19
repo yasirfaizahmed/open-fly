@@ -32,8 +32,9 @@ the tools can do.
    but its *changes* track the odour side, which bias removal (high-pass) can use.
 7. **Odour-guided navigation does not (yet) emerge on FlyWire.** In closed
    loop the FlyWire virtual fly does not find the banana in 12 s: odour barely
-   recruits the walking/steering DNs used as readouts. Taste-evoked feeding and
-   looming-evoked escape do work. ([09](09-virtual-fly.md#on-the-real-flywire-brain))
+   recruits the walking/steering DNs used as readouts. Escape does work: a
+   predator attack triggers the giant-fiber jump 20 ms later.
+   ([09](09-virtual-fly.md#on-the-real-flywire-brain))
 8. **Cross-dataset transfer works.** Transmitters and classes borrowed from
    FlyWire make the hemibrain simulate sensibly: looming drives its giant
    fiber to 162 Hz.

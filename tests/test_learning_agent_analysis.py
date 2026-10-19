@@ -83,3 +83,18 @@ def test_arena_fields():
     assert up != pytest.approx(down)
     for name in Arena.PRESETS:
         assert Arena.preset(name).items
+
+
+def test_steering_decoder_api(toy, tmp_path):
+    from openfly.agent import SteeringDecoder
+
+    dec = SteeringDecoder.fit(toy, duration_ms=200, n_trials=1, intensities=(1.0,))
+    assert dec.idx.size == dec.weights.size > 0
+    assert -1.0 <= dec(np.zeros(dec.idx.size)) <= 1.0
+    assert {"held_out", "train_accuracy", "top"} <= set(dec.info)
+    p = dec.save(tmp_path / "dec.npz")
+    back = SteeringDecoder.load(p)
+    assert np.allclose(back.weights, dec.weights)
+    fly = VirtualFly(toy, "banana", steering=dec)
+    rec = fly.step()
+    assert "drive_turn" in rec

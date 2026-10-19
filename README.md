@@ -89,10 +89,12 @@ openfly fly --arena bitter_trap --plot fly.png      openfly scenarios | odors | 
 * **Learning on the real connectome:** dopamine-gated plasticity makes banana
   attractive (+0.27) or aversive (-0.21) depending on the reinforcer, without
   affecting an unpaired odour ([details](docs/10-training-the-brain.md)).
-* **Closed loop:** the toy-brain virtual fly found and ate the banana in 6/6
-  runs, escaped 6/6 predator attacks, and approached a bitter-spiked bait every
-  time but never ate it. On FlyWire, odour-guided walking does not yet emerge
-  ([why](docs/09-virtual-fly.md#on-the-real-flywire-brain)).
+* **Closed loop:** from 10 random starts the toy-brain virtual fly found and ate
+  the banana **10/10** times, but only 3/10 with its smell neurons silenced, so the
+  circuit does the navigating. It escaped 6/6 predator attacks and approached a
+  bitter-spiked bait every time but never ate it. On the real FlyWire brain the closed-loop fly escapes a
+  predator **20 ms** after the attack, driven by its giant fiber; odour-guided
+  walking does not yet emerge ([why](docs/09-virtual-fly.md#on-the-real-flywire-brain)).
 
 See [Findings and limitations](docs/14-findings-and-limitations.md) before drawing biological conclusions.
 

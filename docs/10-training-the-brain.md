@@ -1,16 +1,17 @@
 # 10. Training the brain
 
-Code: `openfly/learning/` (`mushroom_body.py`, `evolve.py`, `screens.py`)
+Code: `openfly/learning/` (`mushroom_body.py`, `evolve.py`, `screens.py`), `openfly/agent/decoder.py`
 
 > *"Can we train the brain to do certain tasks? I'm not sure if this is possible."*
 
-**Yes, in three different senses**, and the difference matters:
+**Yes, in four different senses**, and the difference matters:
 
 | | what changes | how | biological? | openfly |
 |---|---|---|---|---|
 | **1. Learning the way flies learn** | KC -> MBON synapse strengths | dopamine-gated plasticity during experience | yes: this is how flies form memories | `MushroomBodyPlasticity`, `OlfactoryConditioning` |
 | **2. Optimising the circuit for a task** | gains of chosen cell types (never the wiring) | evolution strategies on any objective | as a model of neuromodulation or development, not of experience | `GainTask`, `EvolutionStrategy` |
 | **3. Finding the controls** | nothing; you search | activate / silence each candidate group | it's what biologists do with genetics | `activation_screen`, `silencing_screen` |
+| **4. Training the interface** | nothing in the brain; a readout learns to interpret it | ridge regression on calibration sessions | no: it's how brain-computer interfaces work | `SteeringDecoder` |
 
 What you *cannot* do is make the fly do something its wiring has no route
 for: training never adds connections. When a task is impossible, the
@@ -135,6 +136,44 @@ screen says it is also **necessary**: with CB0553 silenced, sugar-evoked
 MN9 firing drops from ~80 Hz to ~4 Hz in the spiking model. That is a
 concrete, testable circuit hypothesis produced in minutes, the kind of
 result Shiu et al. confirmed in real flies for other neurons.
+
+## 4. Training the interface: decoding intentions
+
+Sometimes the brain already "knows" the answer but no single neuron says
+it clearly. On FlyWire, odour on one side changes the firing of many
+premotor neurons a little, while the one steering cell type used by the
+default readout (DNa02) is biased to the left. Brain-computer interfaces
+face the same problem with motor cortex, and solve it by **training a
+decoder** on the brain instead of training the brain.
+
+```python
+from openfly.agent import SteeringDecoder, VirtualFly
+dec = SteeringDecoder.fit(brain, odor="banana")   # ~6 min on FlyWire with numba
+dec.info["held_out"]                              # [(target, decoded), ...]
+dec.save("banana_decoder.npz")
+fly = VirtualFly(brain, "banana", steering=dec)   # decoder replaces DNa02
+```
+
+`fit` runs a short **calibration session**: the odour at three intensities,
+stronger on the left (target -1), on the right (+1) and on both sides
+equally (0). It then fits a ridge regression from the firing rates of the
+candidate neurons (default: the `steering_premotor` set, i.e. central and
+descending neurons in LAL, SPS and IPS) to the target. The symmetric
+conditions matter: without them the decoder learns "weaker smell = other
+side". The brain itself is untouched.
+
+**FlyWire v783, curated transmitters, banana.** 168 of the candidates
+respond. Training accuracy (sign) 0.75. On held-out conditions (an intensity
+and a left/right ratio not used for fitting) the decoded turn has the right
+sign every time: **-0.19** for "stronger on the left", **+0.21** for "stronger on
+the right", **-0.06** for symmetric. The largest weights sit on DNb05, WED121,
+WEDPN9, LAL030d (both sides), DNa16, LAL112 and LAL115. These are
+wind/odour-integrating and lateral-accessory-lobe neurons, the steering
+hubs you would expect.
+
+Decoding the side when standing still is easier than steering with it.
+For what happens in closed loop, see
+[09](09-virtual-fly.md#a-population-decoder-for-real-brains).
 
 ## What would it take to go further?
 

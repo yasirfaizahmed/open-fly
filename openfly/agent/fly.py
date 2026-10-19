@@ -32,6 +32,10 @@ current concentration to its recent average (``orn_gain`` sets the
 steepness), so small left/right or moment-to-moment differences stay
 visible at any absolute concentration.
 
+For brains where one steering neuron is a poor readout (FlyWire), pass
+``steering=SteeringDecoder.fit(brain)`` to read turning intent from a whole
+population of descending neurons instead (see :mod:`openfly.agent.decoder`).
+
 Two honest compromises, both switchable:
 
 * ``explore=True`` adds a small baseline walk and random turning when the
@@ -64,7 +68,7 @@ class VirtualFly:
                  turn_highpass_s: float | None = None, antenna_offset_mm: float = 2.0, max_speed: float = 20.0,
                  base_speed: float = 6.0, max_turn_deg_s: float = 500.0, sim: Simulator | None = None,
                  klinokinesis: float = 3.0, klinokinesis_target: str = "LHN", adaptation_s: float = 1.5,
-                 orn_gain: float = 3.0):
+                 orn_gain: float = 3.0, steering=None):
         self.brain = brain
         self.arena = Arena.preset(arena) if isinstance(arena, str) else arena
         self.x, self.y, self.heading = float(x), float(y), math.radians(heading_deg)
@@ -85,6 +89,9 @@ class VirtualFly:
         self.extra_stimuli: list = []
         self._turn_baseline = 0.0
         self._jump_cooldown = 0.0
+        #: optional population decoder (see :mod:`openfly.agent.decoder`) replacing the DNa02 steering readout
+        self.steering = steering
+        self._steer_rates = None
         self.klinokinesis = klinokinesis
         self._kk_target = klinokinesis_target
         self.adaptation_s = adaptation_s
@@ -195,7 +202,15 @@ class VirtualFly:
 
     # -------------------------------------------------------------- motor
     def _read(self, neurons: np.ndarray) -> dict:
-        return self.motor.update(neurons, self.step_ms)
+        drive = self.motor.update(neurons, self.step_ms)
+        if self.steering is not None:
+            dec = self.steering
+            counts = np.bincount(neurons, minlength=self.brain.N)[dec.idx] if neurons.size else np.zeros(dec.idx.size)
+            rate = counts / (self.step_ms / 1000.0)
+            a = min(1.0, self.step_ms / 150.0)
+            self._steer_rates = rate if self._steer_rates is None else (1 - a) * self._steer_rates + a * rate
+            drive["turn"] = dec(self._steer_rates)
+        return drive
 
     def act(self, drive: dict) -> None:
         dt = self.step_ms / 1000.0
