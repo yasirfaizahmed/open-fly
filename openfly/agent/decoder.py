@@ -14,6 +14,9 @@ On FlyWire (curated transmitters) a decoder reading the ~170 responsive
 neurons of the ``steering_premotor`` set (LAL/SPS/IPS, incl. PFL3) decoded
 held-out conditions correctly: odour stronger on the left -0.19, right
 +0.21, symmetric -0.06. Reading descending neurons alone was less reliable.
+In closed loop it steered about as well as the high-passed DNa02 readout,
+not better (docs/09-virtual-fly.md): it was calibrated on steady odours,
+and a walking fly's odour input changes all the time.
 
 **Calibration session.** ``fit`` simulates the odour at several
 intensities, stronger on the left (target -1), stronger on the right

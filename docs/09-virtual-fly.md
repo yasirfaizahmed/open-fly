@@ -137,32 +137,67 @@ that the *loop* works, not that real flies use these exact circuits.
 
 ## On the real FlyWire brain
 
-The same code runs on FlyWire (`turn_highpass_s=3`, curated transmitters),
-but **it does not forage yet**. In a 12 s run in the `banana` arena the fly
-ended 79.5 mm from the banana (it started 82 mm away) and never fed. That
-run took ~6 minutes of compute. The reason is the readout, not the body: in
-the whole-brain LIF model, banana odour barely recruits the descending
-neurons used for walking (DNp09) and steering (DNa02 carries a left bias), so
-movement is dominated by the exploration drive.
+The same code runs on FlyWire (curated transmitters). It is expensive,
+about 25-35 s of compute per simulated second with numba, so each
+condition below was run **once**. Treat the numbers as anecdotes that point
+in a direction, not as statistics.
 
-What does work on FlyWire in closed loop is the **escape**. In the
-`predator` arena the attack came at 4.00 s and the giant fiber fired the
-escape jump at **4.02 s**, a 20 ms reaction time produced entirely by the real
-connectome (LC4/LPLC2 -> giant fiber). Taste-evoked feeding works too, so
-expect the fly to eat when it lands on sugar.
+### Facing away: does smell turn the fly around?
 
-Making odour-guided navigation emerge from the real connectome is an open
-problem and a good project. Candidate approaches: population decoding across
-many DNs instead of a single type, the central-complex steering pathway
-(PFL3), training readout gains with `GainTask`, or a VNC connectome (BANC)
-for the motor side.
+The fly starts 34 mm from the banana, facing directly away (start
+(60, 60), heading 225 deg, seed 3, 15 s). Bearing = angle of the banana
+relative to the heading. A *negative* correlation between bearing and
+turn signal means correct steering: food on the left (bearing > 0)
+gives a left turn (turn < 0).
+
+| readout | smell | klinokinesis | start -> closest | final bearing | corr(bearing, turn) |
+|---|---|---|---|---|---|
+| DNa02, `turn_highpass_s=3` | intact | on | 33.7 -> **19.5 mm** | 44 deg | -0.17 |
+| DNa02, `turn_highpass_s=3` | intact | off | 33.7 -> **20.7 mm** | 3 deg | -0.14 |
+| `SteeringDecoder` | intact | on | 33.6 -> **17.8 mm** | 31 deg | 0.01 |
+| `SteeringDecoder` | intact | off | 33.6 -> **17.5 mm** | 5 deg | -0.11 |
+| DNa02, `turn_highpass_s=3` | ORNs silenced | on | 33.7 -> 33.7 mm (walked off to 84 mm) | 43 deg | n/a |
+| `SteeringDecoder` | ORNs silenced | on | 33.6 -> 33.2 mm | 166 deg | n/a |
+
+What this says:
+
+* **Smell steers the FlyWire fly.** With intact ORNs it turned around and
+  cut its distance to the banana by 40-50% in every condition. With its ORNs
+  silenced it never got closer. The signal travels through the real
+  connectome, from the antennae to premotor and descending neurons.
+* It does so **without the body's run-and-turn rule** (klinokinesis off):
+  the brain's left/right steering signal alone is enough.
+* It is **weak and slow**: correlations of about -0.1 to -0.2, and no fly
+  reached the food (4 mm) within 15 s. The toy fly, by comparison,
+  eats within ~15 s.
+* The two readouts are not clearly different at n = 1.
+
+### From the default start
+
+From (25, 25), 82 mm away, where the odour is weak:
+
+| readout | duration | start -> closest | fed |
+|---|---|---|---|
+| DNa02, `turn_highpass_s=3` | 12 s | 82 mm -> 79.5 mm (end) | no |
+| `SteeringDecoder`, seed 0 | 20 s | 82 mm -> 36.9 mm | no |
+| `SteeringDecoder`, seed 1 | 20 s | 82 mm -> 36.2 mm | no |
+
+The default start faces the banana, so much of this approach is
+walking straight ahead; the bearing-turn correlation on seed 0 was ~0.
+
+### What works without caveats
+
+The **escape**. In the `predator` arena the attack came at 4.00 s and the
+giant fiber fired the escape jump at **4.02 s**, a 20 ms reaction time
+produced entirely by the real connectome (LC4/LPLC2 -> giant fiber).
+Taste-evoked feeding works too: MN9 fires when the fly stands on sugar.
 
 ## A population decoder for real brains
 
-The first candidate above is implemented: `SteeringDecoder` reads the turn
-from ~170 premotor neurons instead of one cell type, the way a
-brain-computer interface reads a reach direction from motor cortex
-(how it is trained: [10](10-training-the-brain.md#4-training-the-interface-decoding-intentions)).
+`SteeringDecoder` reads the turn from ~170 premotor neurons instead of one
+cell type, the way a brain-computer interface reads a reach direction
+from motor cortex (how it is trained:
+[10](10-training-the-brain.md#4-training-the-interface-decoding-intentions)).
 
 ```python
 from openfly.agent import SteeringDecoder, VirtualFly
@@ -171,21 +206,18 @@ dec.save("banana_decoder.npz")                       # reuse: SteeringDecoder.lo
 fly = VirtualFly(brain, "banana", steering=dec)
 ```
 
-Held still, the decoder gets the odour side right on held-out conditions
-(-0.19 left, +0.21 right, -0.06 symmetric). In closed loop that helps but
-does not yet produce reliable odour steering:
+Standing still, it gets the odour side right on held-out conditions
+(-0.19 left, +0.21 right, -0.06 symmetric). In closed loop it steered about
+as well as the high-passed DNa02 readout (tables above), not better. A
+likely reason: it was calibrated on 1 s steady presentations while the
+fly stood still, but in closed loop the odour changes every 20 ms, so
+the decoder reads the brain in states it never saw.
 
-| FlyWire run (~20 s of compute per simulated second) | start | closest / end | fed |
-|---|---|---|---|
-| DNa02 readout, default start, 12 s | 82 mm | end 79.5 mm | no |
-| decoder, default start, seed 0, 20 s | 82 mm | 36.9 / 37.1 mm | no |
+**Open problems, good projects:**
 
-The decoder fly got much closer, but the correlation between the
-banana's bearing and the decoded turn was only 0.05, so most of that
-approach comes from walking in roughly the right direction, not from
-steering. The decoded signal is small (~0.2) next to the exploration
-drive's random turns, and it was calibrated with the fly standing still,
-while in closed loop the odour changes all the time. Next steps worth
-trying: calibrate on closed-loop data (record while the fly walks),
-read a temporal derivative as the toy's klinokinesis does, or fit the
-decoder's gain with `GainTask` on a foraging objective.
+* Calibrate on closed-loop data: record rates while the fly walks
+  (`fly.sim.on_step`) and fit to the true bearing.
+* Make steering stronger without touching the decoder: tune readout or
+  circuit gains with `GainTask` on a foraging objective.
+* Run many seeds on a bigger machine and turn these anecdotes into statistics.
+* Add the VNC (BANC) so the motor side is also connectome-driven.

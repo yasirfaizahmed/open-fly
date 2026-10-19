@@ -100,8 +100,8 @@ work with connectome data.
   neurons silenced vs. smell and vision silenced. Result: **10/10 vs 3/10 vs
   2/10**. Odour guidance really comes from the circuit, and the honest
   number is in the docs, not the flattering one.
-* FlyWire closed loop: escape works (20 ms after the attack), smell-guided
-  walking did not, because odour barely recruits the single-type readouts.
+* FlyWire closed loop: escape works (20 ms after the attack). From the
+  default start, 82 mm away, smell-guided walking seemed absent.
 
 ## 9. Reading intentions: a population decoder
 
@@ -112,6 +112,16 @@ work with connectome data.
   premotor steering regions (LAL/SPS/IPS, 168 responsive neurons including
   PFL3), decoded held-out conditions with the correct sign (-0.19 / +0.21 / -0.06).
   See [09](09-virtual-fly.md#a-population-decoder-for-real-brains).
+* In closed loop the first number looked bad: a bearing-turn correlation
+  of +0.05. Then a sign check: turn > 0 means *right*, bearing > 0 means
+  food on the *left*, so correct steering is a *negative* correlation, and
+  +0.05 meant "none", not "weak".
+* The decisive test was a control, not a better decoder. Started facing
+  away, the FlyWire fly turned round and cut its distance by 40-50% with smell
+  (with either readout, and with klinokinesis off: correlations -0.11 to
+  -0.17), and never approached with its ORNs silenced. Smell steering is
+  in the connectome, but weak, and the decoder was no better than
+  high-passed DNa02. See [09](09-virtual-fly.md#on-the-real-flywire-brain).
 
 ## 10. Playground, docs, tests
 

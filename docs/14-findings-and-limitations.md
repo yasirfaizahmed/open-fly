@@ -30,9 +30,12 @@ the tools can do.
    37.5 Hz when banana is on the left and 15 Hz when it is on the right, while
    right DNa02 stays near 0. So the absolute readout always says "turn left",
    but its *changes* track the odour side, which bias removal (high-pass) can use.
-7. **Odour-guided navigation does not (yet) emerge on FlyWire.** In closed
-   loop the FlyWire virtual fly does not find the banana in 12 s: odour barely
-   recruits the walking/steering DNs used as readouts. Escape does work: a
+7. **Smell steers the FlyWire fly, weakly.** A virtual fly starting 34 mm
+   from a banana and facing away turned around and cut the distance by 40-50% in
+   15 s, with either readout and even with the body's run-and-turn rule
+   off. With its ORNs silenced it never approached. Steering is weak
+   (bearing-turn correlation about -0.1 to -0.2) and the fly did not reach
+   the food in time; each condition was run once. Escape is robust: a
    predator attack triggers the giant-fiber jump 20 ms later.
    ([09](09-virtual-fly.md#on-the-real-flywire-brain))
 8. **Cross-dataset transfer works.** Transmitters and classes borrowed from
