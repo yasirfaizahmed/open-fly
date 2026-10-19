@@ -161,12 +161,18 @@ export class BrainViewer {
   setColorMode(mode, values) {
     this.colorMode = mode;
     const c = this.colors, N = this.N;
+    // the ripple map is a static picture: draw every neuron brighter while it is shown
+    if (mode === "influence") { this._savedBase ??= this.params.base; this.params.base = Math.max(this.params.base, 0.4); }
+    else if (this._savedBase !== undefined) { this.params.base = this._savedBase; this._savedBase = undefined; }
     if (mode === "influence" && values) {
+      // log scale so weak multi-synaptic influence is still visible; untouched neurons stay dim grey
+      const K = 2000, norm = Math.log1p(K);
       for (let i = 0; i < N; i++) {
-        const v = Math.max(-1, Math.min(1, values[i] * 6));
-        const a = Math.min(1, Math.abs(v) * 1.0 + 0.04);
-        if (v >= 0) { c[3 * i] = 1.0 * a; c[3 * i + 1] = 0.45 * a; c[3 * i + 2] = 0.2 * a; }
-        else { c[3 * i] = 0.25 * a; c[3 * i + 1] = 0.55 * a; c[3 * i + 2] = 1.0 * a; }
+        const v = values[i], m = Math.log1p(Math.abs(v) * K) / norm;
+        if (m < 0.02) { c[3 * i] = 0.28; c[3 * i + 1] = 0.3; c[3 * i + 2] = 0.36; continue; }
+        const a = 0.35 + 0.65 * m;
+        if (v >= 0) { c[3 * i] = 1.0 * a; c[3 * i + 1] = 0.42 * a; c[3 * i + 2] = 0.18 * a; }
+        else { c[3 * i] = 0.22 * a; c[3 * i + 1] = 0.55 * a; c[3 * i + 2] = 1.0 * a; }
       }
     } else {
       const key = mode === "nt" ? "nt" : mode === "side" ? "side" : "cls";
