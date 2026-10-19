@@ -36,7 +36,7 @@ Homepage = "https://github.com/yasirfaizahmed/open-fly"
 include = ["openfly*"]
 
 [tool.setuptools.package-data]
-openfly = ["playground/static/**/*", "viz/templates/*"]
+openfly = ["playground/static/*", "playground/static/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
